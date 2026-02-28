@@ -4,21 +4,35 @@
   <h3>Create a New Listing</h3>
   <br>
 
-  <form method="POST" action="/listings">
+  <form method="POST" action="/listings" novalidate class="needs-validation">
 
     <div class="mb-3">
       <label for="title" class="form-label">Title</label>
       <input id="title" name="listing[title]" 
              placeholder="Add a catchy title" 
              type="text" 
-             class="form-control"/>
+             class="form-control"
+             required
+            />
+      <div class="invalid-feedback">
+        Please provide a title for your listing.
+      </div>
+      <div class="valid-feedback">
+        Title looks good!
+      </div>
     </div>
 
     <div class="mb-3">
       <label for="description" class="form-label">Description</label>
       <textarea id="description"
                 name="listing[description]"
-                class="form-control"></textarea>
+                class="form-control"
+                required
+                ></textarea>
+      <div class="invalid-feedback">
+        Please provide a description for your listing. </div>
+      <div class="valid-feedback">
+        Description looks good! </div>
     </div>
 
     <div class="mb-3">
@@ -27,7 +41,11 @@
              name="listing[image]"
              placeholder="Enter image URL/Link"
              type="text"
-             class="form-control"/>
+             class="form-control"
+            />
+        
+      <div class="valid-feedback">
+        Image URL looks good! </div>
     </div>
     <div class="row">
     <div class="mb-3 col-md-4" >
@@ -35,8 +53,14 @@
       <input id="price"
              name="listing[price]"
              placeholder="1200"
+             class="form-control"
              type="number"
-             class="form-control"/>
+             required
+             />
+        <div class="invalid-feedback">
+        Please provide a price for your listing. </div>
+      <div class="valid-feedback">
+        Price looks good! </div>
     </div>
 
     <div class="mb-3 col-md-8">
@@ -45,7 +69,13 @@
              name="listing[country]"
              placeholder="Canada"
              type="text"
-             class="form-control"/>
+             class="form-control"
+             required
+             />
+        <div class="invalid-feedback">
+        Please provide a country for your listing. </div>
+      <div class="valid-feedback">
+        Country looks good! </div>
     </div>
     </div>
     <div class="mb-3">
@@ -54,7 +84,13 @@
              name="listing[location]"
              placeholder="Winnipeg, MB"
              type="text"
-             class="form-control"/>
+             class="form-control"
+             required
+             />
+             <div class="invalid-feedback">
+        Please provide a location for your listing. </div>
+      <div class="valid-feedback">
+        Location looks good! </div>
     </div>
     <br>
     <button type="submit" class="btn btn-dark add-btn">Add</button>
