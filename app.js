@@ -34,6 +34,7 @@ main()
     console.log(err);
   });
 
+  mongoose.set('strictQuery', false);
 async function main() {
   await mongoose.connect(dbUrl);
 }
