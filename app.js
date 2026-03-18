@@ -1,10 +1,5 @@
 require("dotenv").config();
-// add this in app.js right after require("dotenv").config();
-console.log("ENV CHECK:", {
-  atlasdb: process.env.ATLASDB_URL ? "loaded" : "missing",
-  secret: process.env.SECRET ? "loaded" : "missing",
-  cloudName: process.env.CLOUD_NAME ? "loaded" : "missing",
-});
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -13,12 +8,9 @@ const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 const ExpressError = require("./utils/ExpressError.js");
 
-const { storage } = require("./utils/cloudConfig.js");
-
 const listingRouter = require("./routes/listing.js");
 const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
-
 
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
@@ -28,99 +20,137 @@ const passport = require("passport");
 const LocalStrategy = require("passport-local");
 const User = require("./models/user.js");
 
-
 const dbUrl = process.env.ATLASDB_URL;
 
-main()
-  .then(() => {
-    console.log("connected to DB");
-  })
-  .catch((err) => {
-    console.log(err);
-  });
+/* =========================
+   DATABASE CONNECTION
+========================= */
 
-  mongoose.set('strictQuery', false);
 async function main() {
   await mongoose.connect(dbUrl);
+  console.log("connected to DB");
+
+  // FIX 1: Clear old unencrypted sessions so connect-mongo doesn't crash
+  try {
+    await mongoose.connection.collection("sessions").deleteMany({});
+    console.log("Old sessions cleared");
+  } catch (e) {
+    // sessions collection may not exist yet — fine
+  }
+
+  startServer();
 }
+
+main().catch((err) => console.log(err));
+
+/* =========================
+   EXPRESS CONFIG
+========================= */
+
 app.engine("ejs", ejsMate);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
 app.use(express.static(path.join(__dirname, "public")));
 
+/* =========================
+   SESSION STORE
+========================= */
 
-const store = MongoStore.create({
-  mongoUrl : dbUrl,
-  crypto: {
+function startServer() {
+
+  const store = MongoStore.create({
+    mongoUrl:dbUrl,
+    touchAfter: 24 * 3600,
+  });
+
+  store.on("error", (err) => {
+    console.log("SESSION STORE ERROR:", err);
+  });
+
+  const sessionOptions = {
+    store,
     secret: process.env.SECRET,
-  },
-  touchAfter: 24*3600,
-})
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7), // FIX 3: new Date()
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      httpOnly: true,
+    },
+  };
 
-store.on("error",(err)=>{
-  console.log("Error in Mongo Session Store",err);
-})
+  /* =========================
+     MIDDLEWARE (order matters!)
+  ========================= */
 
-const sessionOptions = {
-  store,
-  secret: process.env.SECRET,
-  resave: false,
-  saveUninitialized:true,
-  cookie:{
-    expires:Date.now()+1000*60*60*24*7,
-    maxAge:1000*60*60*24*7,
-    httpOnly:true
-  }
-}
+  app.use(session(sessionOptions));   // 1. session first
+  app.use(flash());                   // 2. flash
 
-/* app.get("/", (req, res) => {
-  res.send("Hi, I am root");
-});
- */
-app.use(session(sessionOptions));
-app.use(flash());
+  app.use(passport.initialize());     // 3. passport init
+  app.use(passport.session());        // 4. passport session
 
-app.use(passport.initialize());
-app.use(passport.session());
-passport.use(new LocalStrategy(User.authenticate()));
+  passport.use(new LocalStrategy(User.authenticate()));
+  passport.serializeUser(User.serializeUser());
+  passport.deserializeUser(User.deserializeUser());
 
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+  // 5. Global locals — AFTER passport so req.user is populated
+  app.use((req, res, next) => {
+    res.locals.success = req.flash("success");
+    res.locals.error = req.flash("error");
+    res.locals.currentUser = req.user;  // now always defined in views
+    next();
+  });
 
-app.use((req, res, next) => {
-  res.locals.success = req.flash("success");
-  res.locals.error = req.flash("error");
-  res.locals.currentUser = req.user;
-  next();
-});
+  /* =========================
+     TEST ROUTE
+  ========================= */
 
-app.get("/fakeUser", (req, res) => {
-  let fakeUser = new User({ email: "fake@gmail.com", username: "fakeUser" });
-  User.register(fakeUser, "het", (err, registeredUser) => {
-    if (err) {
-      return res.send(err);
-    }
+  app.get("/fakeUser", async (req, res) => {
+    let fakeUser = new User({
+      email: "fake@gmail.com",
+      username: "fakeUser",
+    });
+    const registeredUser = await User.register(fakeUser, "het");
     res.send(registeredUser);
   });
-});
-app.use("/listings", listingRouter);
-app.use("/listings/:id/reviews", reviewRouter);
-app.use("/", userRouter);
 
+  /* =========================
+     ROUTES
+  ========================= */
 
+  app.use("/listings", listingRouter);
+  app.use("/listings/:id/reviews", reviewRouter);
+  app.use("/", userRouter);
 
-app.use((req, res, next) => {
-  next(new ExpressError(404,"Page Not Found"));
-});
+  /* =========================
+     404 HANDLER
+  ========================= */
 
+  app.use((req, res, next) => {
+    next(new ExpressError(404, "Page Not Found"));
+  });
 
-app.use((err, req, res, next) => {
-  let{ statusCode=500,message="Something went wrong"} = err;
-res.render("error.ejs",{message});
-});
+  /* =========================
+     ERROR HANDLER
+  ========================= */
 
-app.listen(8080, () => {
-  console.log("server is listening to port 8080");
-});
+  app.use((err, req, res, next) => {
+    console.log(err);
+    if (res.headersSent) {
+      return next(err);
+    }
+    let { statusCode = 500, message = "Something went wrong" } = err;
+    res.status(statusCode).render("error.ejs", { message });
+  });
+
+  /* =========================
+     START SERVER
+  ========================= */
+
+  app.listen(8080, () => {
+    console.log("server is listening to port 8080");
+  });
+}
