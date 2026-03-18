@@ -1,5 +1,10 @@
 require("dotenv").config();
-
+// add this in app.js right after require("dotenv").config();
+console.log("ENV CHECK:", {
+  atlasdb: process.env.ATLASDB_URL ? "loaded" : "missing",
+  secret: process.env.SECRET ? "loaded" : "missing",
+  cloudName: process.env.CLOUD_NAME ? "loaded" : "missing",
+});
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
