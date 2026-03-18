@@ -1,7 +1,6 @@
-
 {
-  "engines":{
-    "node": "10.9.2"
+  "engines": {
+    "node": "20.x"
   },
   "name": "wanderlust",
   "version": "1.0.0",
@@ -17,7 +16,7 @@
     "@mapbox/mapbox-sdk": "^0.16.2",
     "cloudinary": "^1.21.0",
     "connect-flash": "^0.1.1",
-    "connect-mongo": "^6.0.0",
+    "connect-mongo": "^4.6.0",
     "dotenv": "^17.3.1",
     "ejs": "^4.0.1",
     "ejs-mate": "^4.0.0",
