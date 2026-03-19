@@ -2,6 +2,11 @@
 
 A full-stack web application for listing and discovering travel accommodations — built for real users with **Node.js**, **Express**, **MongoDB**, and **EJS**. Browse vacation homes and unique stays, leave reviews, upload images, and explore locations on an interactive map.
 
+## 🚀 Live Demo
+
+The app is deployed on **Render**:
+> 🔗 [https://wanderlust-5-cqow.onrender.com/listings](https://wanderlust-5-cqow.onrender.com/listings)
+
 ## ✨ Features
 
 - 🔐 **User Authentication** — Secure login & signup so only registered users can create and manage listings
@@ -43,10 +48,6 @@ A full-stack web application for listing and discovering travel accommodations �
 - **Multer** — Multipart form data / file uploads
 - **Nodemon** — Development server with auto-reload
 
-## 🚀 Live Demo
-
-The app is deployed on **Render**:
-> 🔗 _Add your Render deployment URL here_
 
 ## 📋 Prerequisites
 
